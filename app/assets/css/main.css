@@ -1,2 +1,31 @@
-/* main.css */
 @import "tailwindcss";
+
+@theme {
+  /* === 字体定义 === */
+  --font-pixel: "Courier New", Courier, monospace;
+
+  /* === 语义化配色 (Semantic Palette) === */
+  --color-game-bg: #1a1b26; /* 深色背景 */
+  --color-game-surface: #24283b; /* 容器背景 */
+  --color-game-primary: #73daca; /* 主色/按钮 */
+  --color-game-accent: #ff9e64; /* 强调/警告 */
+  --color-game-secondary: #bb9af7; /* 辅助/设置 */
+  --color-game-text: #c0caf5; /* 文本 */
+  --color-game-border: #414868; /* 边框 */
+}
+
+body {
+  @apply font-pixel antialiased overflow-hidden text-game-text bg-game-bg;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-game-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-game-border);
+  border-radius: 4px;
+}
