@@ -28,8 +28,8 @@ definePageMeta({
             </NuxtLink>
 
             <!-- 继续游戏 -->
-            <NuxtLink to="/game">
-                <ContinueGameButton />
+            <NuxtLink to="/levels">
+                <LevelsButton />
             </NuxtLink>
 
             <!-- 设置 -->

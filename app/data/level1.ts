@@ -6,6 +6,7 @@ const { Floor, Wall, Goal } = TileType
 
 export const level1: LevelConfig = {
     id: 1,
+    difficulty: 1,
     title: "Hello World",
     initialCode: `// Level 1: Try to reach the flag!\n// Tip: Use robot.moveRight()\nrobot.moveRight(2);\nrobot.moveDown();`,
     startPos: { x: 1, y: 1 },

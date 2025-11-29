@@ -1,8 +1,17 @@
+<!-- pages/game.vue -->
 <script setup lang="ts">
 import { levels } from '~/data/index.js' // 确保这里路径对
 import { type LevelConfig, type Point, TileType } from '~/types/game.js'
 // 1.1 关卡与日志
-const currentLevelIndex = ref(0)
+const route = useRoute()
+const getInitialLevelIndex = () => {
+    const queryIdx = Number(route.query.levelIndex)
+    if (!isNaN(queryIdx) && queryIdx >= 0 && queryIdx < levels.length) {
+        return queryIdx
+    }
+    return 0
+}
+const currentLevelIndex = ref(getInitialLevelIndex())
 const currentLevel = computed<LevelConfig>(() => {
     return levels[currentLevelIndex.value] || levels[0] as LevelConfig
 })

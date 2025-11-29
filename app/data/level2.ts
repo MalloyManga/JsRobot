@@ -5,6 +5,7 @@ const { Floor, Wall, Goal } = TileType
 
 export const level2: LevelConfig = {
     id: 2,
+    difficulty: 2,
     title: "The Corridor",
     initialCode: `// Level 2: The Corridor\n// Watch out for walls!\nrobot.moveRight(1);`,
     startPos: { x: 4, y: 3 },
