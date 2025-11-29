@@ -1,14 +1,21 @@
 // app/data/level1.ts
 import { type LevelConfig, TileType } from '~/types/game.js'
-
-// 为了写起来方便，可以解构出来，或者直接写 TileType.Wall
 const { Floor, Wall, Goal } = TileType
 
 export const level1: LevelConfig = {
     id: 1,
     difficulty: 1,
     title: "Hello World",
-    initialCode: `// Level 1: Try to reach the flag!\n// Tip: Use robot.moveRight()\nrobot.moveRight(2);\nrobot.moveDown();`,
+    // 教学：解释 Robot 是对象，moveRight 是动作
+    initialCode: `// Welcome, Cadet!
+// In JavaScript, "robot" is the Object.
+// "moveRight" is the Action.
+
+// TASK: Uncomment the code below to move.
+// (Delete the "//" at the start)
+
+// robot.moveRight(2);
+// robot.moveDown();`,
     startPos: { x: 1, y: 1 },
     map: [
         [Wall, Wall, Wall, Wall, Wall],

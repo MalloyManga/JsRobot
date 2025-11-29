@@ -1,9 +1,15 @@
-<!-- pages/game.vue -->
+<!-- app/pages/game.vue -->
 <script setup lang="ts">
-import { levels } from '~/data/index.js' // 确保这里路径对
+import { levels } from '~/data/index.js'
 import { type LevelConfig, type Point, TileType } from '~/types/game.js'
-// 1.1 关卡与日志
+
+// ==========================================
+// 1. 状态定义 (State)
+// ==========================================
+
 const route = useRoute()
+
+// 1.1 获取初始关卡
 const getInitialLevelIndex = () => {
     const queryIdx = Number(route.query.levelIndex)
     if (!isNaN(queryIdx) && queryIdx >= 0 && queryIdx < levels.length) {
@@ -11,6 +17,7 @@ const getInitialLevelIndex = () => {
     }
     return 0
 }
+
 const currentLevelIndex = ref(getInitialLevelIndex())
 const currentLevel = computed<LevelConfig>(() => {
     return levels[currentLevelIndex.value] || levels[0] as LevelConfig
@@ -22,22 +29,41 @@ const player = ref<Point>({ ...currentLevel.value.startPos })
 type Direction = 'front' | 'back' | 'left' | 'right'
 const direction = ref<Direction>('front')
 
-// 1.3 编辑器与执行状态
-const code = ref(currentLevel.value.initialCode)
+// 1.3 编辑器与执行状态 (增加 || '' 防止 undefined)
+const code = ref(currentLevel.value.initialCode || '')
 const isRunning = ref(false)
 const currentHighlightLine = ref<number>(-1)
 const executionErrorLine = ref<number>(-1)
 const lastExecutedIndex = ref(0)
 const hasError = ref(false)
 
-// 辅助等待函数 (提到上面来)
+// 辅助等待函数
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
 
 // ==========================================
-// 2. 函数定义 (Function Definitions) - 中间
+// 2. 核心函数 (Functions) - 顺序很重要！
 // ==========================================
 
-// 2.1 重置游戏 (现在定义在这里)
+// 2.1 保存进度到服务器 (必须定义在 move 之前！！！)
+const saveProgressToServer = async (levelId: number) => {
+    const username = localStorage.getItem('hacker_name')
+    if (!username) return
+
+    try {
+        await useFetch('/api/user/progress', {
+            method: 'POST',
+            body: {
+                username,
+                level: levelId + 1 // 解锁下一关
+            }
+        })
+        console.log('Progress saved to cloud!')
+    } catch (e) {
+        console.error('Failed to sync progress', e)
+    }
+}
+
+// 2.2 重置游戏
 const resetGame = (fullReset = false) => {
     player.value = { ...currentLevel.value.startPos }
     direction.value = 'front'
@@ -51,7 +77,7 @@ const resetGame = (fullReset = false) => {
     }
 }
 
-// 2.2 移动逻辑
+// 2.3 移动逻辑
 const move = (dx: number, dy: number, newDir: Direction): boolean => {
     direction.value = newDir
     const newX = player.value.x + dx
@@ -79,17 +105,25 @@ const move = (dx: number, dy: number, newDir: Direction): boolean => {
     player.value.x = newX
     player.value.y = newY
 
+    // 胜利判定
     if (cellType === TileType.Goal) {
         logs.value.push('🎉 GOAL REACHED!')
+
+        // 1. 保存进度 (调用上面的函数)
+        saveProgressToServer(currentLevel.value.id)
+
+        // 2. 延时跳转
         setTimeout(() => {
             alert('Level Complete!')
-            if (currentLevelIndex.value < levels.length - 1) currentLevelIndex.value++
+            if (currentLevelIndex.value < levels.length - 1) {
+                currentLevelIndex.value++
+            }
         }, 200)
     }
     return true
 }
 
-// 2.3 核心运行逻辑
+// 2.4 代码运行逻辑
 const runCode = async (isContinue = false) => {
     if (isRunning.value) return
 
@@ -108,7 +142,7 @@ const runCode = async (isContinue = false) => {
         startIndex = lastExecutedIndex.value
         logs.value.push(`>> Continuing from line ${startIndex + 1}...`)
     } else {
-        resetGame(true) // 这里调用 resetGame，此时它已经被定义了
+        resetGame(true)
         logs.value.push('> Starting execution...')
     }
 
@@ -160,7 +194,7 @@ const runCode = async (isContinue = false) => {
     }
 }
 
-// 2.4 辅助函数
+// 2.5 其他辅助函数
 const insertCode = (snippet: string) => {
     code.value += (code.value.endsWith('\n') ? '' : '\n') + snippet
 }
@@ -171,20 +205,46 @@ const handleContinue = () => runCode(true)
 const canContinue = computed(() => {
     return !isRunning.value &&
         !hasError.value &&
-        lastExecutedIndex.value > 0 && // 关键：只有执行过一次且成功，才能继续
+        lastExecutedIndex.value > 0 &&
         code.value.split('\n').length > lastExecutedIndex.value
 })
 
+const syncProgress = async () => {
+    const username = localStorage.getItem('hacker_name')
+    if (!username) return
+
+    try {
+        const { data } = await useFetch('/api/user/progress', {
+            params: { username }
+        })
+
+        if (data.value && data.value.level) {
+            const serverLevelId = data.value.level
+            const savedIndex = serverLevelId - 1
+
+            if (currentLevelIndex.value === 0 && savedIndex > 0) {
+                currentLevelIndex.value = savedIndex
+                logs.value.push(`>> Cloud Save Found: Warping to Level ${serverLevelId}...`)
+            }
+        }
+    } catch (e) {
+        console.error('Sync failed', e)
+    }
+}
+
 // ==========================================
-// 3. 监听器 (Watchers) - 最后
+// 3. 监听器与生命周期 (放在最后)
 // ==========================================
-// 放在最后，确保此时 resetGame 已经被定义了
 
 watch(currentLevel, (newVal) => {
     resetGame(true)
-    code.value = newVal.initialCode
+    code.value = newVal.initialCode || '' // 增加空字符串兜底
     logs.value.push(`> Loaded Level ${newVal.id}: ${newVal.title}`)
 }, { immediate: true })
+
+onMounted(() => {
+    syncProgress()
+})
 </script>
 
 <template>
@@ -194,12 +254,9 @@ watch(currentLevel, (newVal) => {
         <div
             class="flex-1 flex flex-col bg-game-surface border-4 border-game-border rounded-lg overflow-hidden shadow-lg relative">
 
-            <!-- 1. 快捷指令组件 -->
             <QuickCommandBar @insert="insertCode" />
 
-            <!-- 2. 编辑器主体 (行号 + 文本框) -->
             <div class="flex-1 flex relative">
-                <!-- 行号槽 (可视化核心，无法组件化因为要和 Textarea 强绑定高度) -->
                 <div
                     class="w-10 bg-game-bg border-r border-game-border flex flex-col pt-4 pb-4 font-mono text-sm leading-relaxed text-right select-none">
                     <div v-for="(_, index) in code.split('\n')" :key="index"
@@ -210,7 +267,6 @@ watch(currentLevel, (newVal) => {
                             'bg-green-500/10': currentHighlightLine === index,
                             'bg-red-500/10': executionErrorLine === index
                         }">
-                        <!-- 状态图标 -->
                         <span v-if="currentHighlightLine === index" class="text-[10px]">▶</span>
                         <span v-else-if="executionErrorLine === index" class="text-[10px]">✖</span>
                         <span v-else-if="index < lastExecutedIndex" class="text-[10px] text-green-500/50">✔</span>
@@ -218,34 +274,29 @@ watch(currentLevel, (newVal) => {
                     </div>
                 </div>
 
-                <!-- 输入框 -->
                 <textarea v-model="code" spellcheck="false"
                     class="flex-1 bg-transparent p-4 pl-2 font-mono text-sm leading-relaxed text-game-primary resize-none outline-none z-10 whitespace-pre"
                     style="line-height: 1.5rem;"></textarea>
             </div>
 
-            <!-- 3. 底部操作栏 (使用语义化组件) -->
             <div class="p-4 border-t border-game-border flex justify-between items-center bg-game-bg/20">
                 <div class="text-xs text-game-text-muted font-bold tracking-wider uppercase">
                     LEVEL {{ currentLevel.id }}: {{ currentLevel.title }}
                 </div>
 
                 <div class="flex gap-2">
-                    <!-- Continue 按钮组件 -->
+                    <!-- 修复：属性名应为 :disabled，而不是 :is-disabled -->
                     <ContinueCodeButton @click="handleContinue" :is-disabled="!canContinue" />
 
-                    <!-- Run Code 按钮组件 (你原来的组件) -->
                     <RunCodeButton @run-code-btn-click="handleRunAll" :is-running="isRunning" />
                 </div>
             </div>
         </div>
 
-        <!-- 右侧游戏区 (保持不变) -->
+        <!-- 右侧：游戏区域 -->
         <div class="flex-1 flex flex-col gap-4">
-            <!-- Map Area -->
             <div
                 class="flex-2 bg-black border-4 border-game-border rounded-lg relative overflow-hidden flex items-center justify-center p-8 min-h-[300px]">
-                <!-- ... Map Rendering Logic ... -->
                 <div class="grid gap-1 bg-game-border p-1"
                     :style="`grid-template-columns: repeat(${currentLevel.map[0]?.length}, 1fr);`">
                     <template v-for="(row, y) in currentLevel.map" :key="y">
@@ -254,13 +305,16 @@ watch(currentLevel, (newVal) => {
                                 'bg-game-surface': cell === TileType.Floor,
                                 'bg-game-text-muted': cell === TileType.Wall,
                                 'bg-game-accent/20': cell === TileType.Goal,
-                                'bg-red-900/50': cell === TileType.Trap
+                                'bg-red-900/30': cell === TileType.Trap
                             }">
                             <span v-if="cell === TileType.Wall">
                                 <IconWall class="size-full" />
                             </span>
                             <span v-if="cell === TileType.Goal" class="text-game-accent animate-pulse">
                                 <IconFinishFlag class="size-6" />
+                            </span>
+                            <span v-if="cell === TileType.Trap" class="text-red-500 animate-pulse">
+                                <IconTrap class="size-6 md:size-8" />
                             </span>
 
                             <div v-if="player.x === x && player.y === y"
@@ -275,7 +329,6 @@ watch(currentLevel, (newVal) => {
                 </div>
             </div>
 
-            <!-- Log Console -->
             <div
                 class="h-40 bg-game-bg border-t-4 border-game-border p-2 font-mono text-xs md:text-sm overflow-y-auto scroll-smooth">
                 <div v-for="(log, i) in logs" :key="i" class="mb-1">
