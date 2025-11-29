@@ -109,10 +109,7 @@ const move = (dx: number, dy: number) => {
             <!-- Action Bar -->
             <div class="p-4 border-t border-game-border flex justify-between items-center bg-game-bg/20">
                 <div class="text-xs text-game-text-muted">STATUS: {{ isRunning ? 'RUNNING...' : 'READY' }}</div>
-                <button @click="runCode" :disabled="isRunning"
-                    class="bg-game-primary text-game-bg px-6 py-2 font-bold hover:brightness-110 active:translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-                    {{ isRunning ? 'EXECUTING...' : 'RUN CODE ▶' }}
-                </button>
+                <RunCodeButton @run-code-btn-click="runCode" :is-running="isRunning" />
             </div>
         </div>
 
@@ -134,22 +131,34 @@ const move = (dx: number, dy: number) => {
                                 'bg-game-text-muted': cell === 1, // Wall (Grey)
                                 'bg-game-accent/20': cell === 2  // Goal (Orange tint)
                             }">
+                            <!-- <span v-if="cell === 0">
+                                <IconGround class="size-full" />
+                            </span> -->
+
                             <!-- Wall Visual -->
-                            <span v-if="cell === 1" class="text-game-bg text-opacity-50 text-xs">#</span>
+                            <span v-if="cell === 1" class="text-game-bg text-opacity-80 text-xs">
+                                <IconWall class="size-full" />
+                            </span>
 
                             <!-- Goal Visual -->
-                            <span v-if="cell === 2" class="text-game-accent animate-pulse text-lg">🚩</span>
+                            <span v-if="cell === 2" class="text-game-accent animate-pulse text-lg">
+                                <IconFinishFlag class="size-6" />
+                            </span>
 
                             <!-- Player Visual (Overlay) -->
                             <!-- 使用绝对定位 + 简单的 v-if 判断是否在此格子 -->
                             <div v-if="player.x === x && player.y === y"
-                                class="absolute inset-0 bg-game-primary shadow-[0_0_15px_var(--color-game-primary)] z-10 animate-bounce">
+                                class="absolute inset-0 bg-game-primary shadow-[0_0_15px_var(--color-game-primary)] z-10">
                                 <!-- Robot Face SVG -->
-                                <svg viewBox="0 0 24 24" class="w-full h-full text-game-bg p-1" fill="currentColor">
+                                <!-- <svg viewBox="0 0 24 24" class="w-full h-full text-game-bg p-1" fill="currentColor">
                                     <path d="M4 4h16v16H4z" />
                                     <path d="M7 8h2v2H7zm8 0h2v2h-2z" fill="white" />
                                     <path d="M7 14h10" stroke="white" stroke-width="2" />
-                                </svg>
+                                </svg> -->
+                                <!-- <IconRobotFront class="size-full" /> -->
+                                <IconRobotBack class="size-full" />
+                                <!-- <IconRobotRight class="size-full" /> -->
+                                <!-- <IconRobotLeft class="size-full" /> -->
                             </div>
                         </div>
                     </template>
