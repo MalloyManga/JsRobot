@@ -7,10 +7,11 @@ const { Floor, Wall, Goal } = TileType
 export const level1: LevelConfig = {
     id: 1,
     title: "Hello World",
+    initialCode: `// Level 1: Try to reach the flag!\n// Tip: Use robot.moveRight()\nrobot.moveRight(2);\nrobot.moveDown();`,
     startPos: { x: 1, y: 1 },
     map: [
         [Wall, Wall, Wall, Wall, Wall],
-        [Wall, Floor, Floor, Floor, Wall], // 这里演示加了一个陷阱 Trap(3)
+        [Wall, Floor, Floor, Floor, Wall],
         [Wall, Floor, Wall, Floor, Wall],
         [Wall, Floor, Floor, Goal, Wall],
         [Wall, Wall, Wall, Wall, Wall]

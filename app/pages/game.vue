@@ -14,7 +14,7 @@ type Direction = 'front' | 'back' | 'left' | 'right'
 const direction = ref<Direction>('front')
 
 // 1.3 编辑器与执行状态
-const code = ref('// Level 1\nrobot.moveRight(2);\nrobot.moveDown();')
+const code = ref(currentLevel.value.initialCode)
 const isRunning = ref(false)
 const currentHighlightLine = ref<number>(-1)
 const executionErrorLine = ref<number>(-1)
@@ -172,11 +172,10 @@ const canContinue = computed(() => {
 // 放在最后，确保此时 resetGame 已经被定义了
 
 watch(currentLevel, (newVal) => {
-    // 此时 resetGame 已经定义，可以安全调用
     resetGame(true)
+    code.value = newVal.initialCode
     logs.value.push(`> Loaded Level ${newVal.id}: ${newVal.title}`)
 }, { immediate: true })
-
 </script>
 
 <template>

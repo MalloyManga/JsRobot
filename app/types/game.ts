@@ -22,5 +22,6 @@ export interface LevelConfig {
     map: TileType[][]
     startPos: Point
     // 拓展实体暂时保持原样
+    initialCode: string // [新增] 每一关的初始代码
     entities?: any[]
 }
