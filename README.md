@@ -1,75 +1,35 @@
-# Nuxt Minimal Starter
+# 🤖 JS-Dungeon (JS 地牢探险)
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+> Code your way out. (用代码杀出重围)
+> 一个基于浏览器的可视化 JavaScript 编程学习游戏
 
-## Setup
+## 📖 项目简介 (Introduction)
 
-Make sure to install dependencies:
+在编程教育中，新手往往对枯燥的控制台输出（Console log）感到厌倦。**JS-Dungeon** 旨在通过游戏化的方式，让初学者在解决实际问题的过程中掌握 JavaScript 的基础语法。
 
-```bash
-# npm
-npm install
+玩家扮演一名被困在地牢中的机器人，无法直接控制身体，需通过在左侧控制台输入 **JavaScript 代码** 来驱动自己在右侧的网格地图中移动、与环境交互，最终抵达终点。
 
-# pnpm
-pnpm install
+## ✨ 核心功能 (Key Features)
 
-# yarn
-yarn install
+- **🎮 可视化编程反馈**：告别枯燥的黑底白字，你的每一行代码都会变成机器人的实际动作。
+- **🧩 沉浸式解谜**：将编程逻辑（循环、判断、函数调用）转化为迷宫解谜要素。
+- **⚡ 实时编译运行**：基于浏览器的 JS 解析，即写即跑，毫秒级反馈。
+- **🎨 复古像素风格**：经典的 8-bit 视觉体验，致敬早期的计算机极客精神。
 
-# bun
-bun install
-```
+## 🕹️ How to Play
 
-## Development Server
+1. **运行**：点击 "Run Code"，见证机器人执行你的逻辑。
+2. **观察地图**：在右侧屏幕查看机器人位置和终点位置。
+3. **编写指令**：在左侧编辑器输入指令，例如：
+4. **编写指令**：在左侧编辑器输入指令，例如：
 
-Start the development server on `http://localhost:3000`:
+   ```jsx
+   // 向右移动两格
+   robot.moveRight();
+   robot.moveRight();
 
-```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
-```
-
-## Production
-
-Build the application for production:
-
-```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+   // 或者使用循环 (开发中)
+   for (let i = 0; i < 3; i++) {
+     robot.moveDown();
+   }
+   ```
