@@ -29,22 +29,30 @@ const player = ref<Point>({ ...currentLevel.value.startPos })
 type Direction = 'front' | 'back' | 'left' | 'right'
 const direction = ref<Direction>('front')
 
-// 1.3 编辑器与执行状态 (增加 || '' 防止 undefined)
+// 1.3 编辑器与执行状态
 const code = ref(currentLevel.value.initialCode || '')
 const isRunning = ref(false)
-const currentHighlightLine = ref<number>(-1)
-const executionErrorLine = ref<number>(-1)
-const lastExecutedIndex = ref(0)
 const hasError = ref(false)
+// 注意：高级引擎很难精确追踪“当前行”，所以高亮行功能弱化，重点在于能跑通逻辑
+const currentHighlightLine = ref<number>(-1)
+
+// 记录已执行的指令数量 (用于 Continue)
+const lastExecutedCommandCount = ref(0)
 
 // 辅助等待函数
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
 
+// 定义指令结构
+interface Command {
+    action: 'move' | 'turn'
+    dir?: Direction
+}
+
 // ==========================================
-// 2. 核心函数 (Functions) - 顺序很重要！
+// 2. 核心函数 (Functions)
 // ==========================================
 
-// 2.1 保存进度到服务器 (必须定义在 move 之前！！！)
+// 2.1 保存进度
 const saveProgressToServer = async (levelId: number) => {
     const username = localStorage.getItem('hacker_name')
     if (!username) return
@@ -54,7 +62,7 @@ const saveProgressToServer = async (levelId: number) => {
             method: 'POST',
             body: {
                 username,
-                level: levelId + 1 // 解锁下一关
+                level: levelId + 1
             }
         })
         console.log('Progress saved to cloud!')
@@ -68,22 +76,22 @@ const resetGame = (fullReset = false) => {
     player.value = { ...currentLevel.value.startPos }
     direction.value = 'front'
     currentHighlightLine.value = -1
-    executionErrorLine.value = -1
     hasError.value = false
 
     if (fullReset) {
-        lastExecutedIndex.value = 0
+        lastExecutedCommandCount.value = 0
         logs.value = []
     }
 }
 
-// 2.3 移动逻辑
+// 2.3 移动逻辑 (物理层)
 const move = (dx: number, dy: number, newDir: Direction): boolean => {
     direction.value = newDir
     const newX = player.value.x + dx
     const newY = player.value.y + dy
     const map = currentLevel.value.map
 
+    // 越界
     if (!map[newY] || typeof map[newY][newX] === 'undefined') {
         logs.value.push(`❌ Out of bounds!`)
         return false
@@ -91,28 +99,27 @@ const move = (dx: number, dy: number, newDir: Direction): boolean => {
 
     const cellType = map[newY][newX]
 
+    // 撞墙
     if (cellType === TileType.Wall) {
         logs.value.push(`❌ Hit a wall!`)
         return false
     }
 
+    // 陷阱
     if (cellType === TileType.Trap) {
         logs.value.push(`💀 DIED! Step on trap!`)
         player.value = { ...currentLevel.value.startPos }
         return false
     }
 
+    // 移动成功
     player.value.x = newX
     player.value.y = newY
 
-    // 胜利判定
+    // 胜利
     if (cellType === TileType.Goal) {
         logs.value.push('🎉 GOAL REACHED!')
-
-        // 1. 保存进度 (调用上面的函数)
         saveProgressToServer(currentLevel.value.id)
-
-        // 2. 延时跳转
         setTimeout(() => {
             alert('Level Complete!')
             if (currentLevelIndex.value < levels.length - 1) {
@@ -123,78 +130,96 @@ const move = (dx: number, dy: number, newDir: Direction): boolean => {
     return true
 }
 
-// 2.4 代码运行逻辑
+// 2.4 代码运行逻辑 (逻辑层 - 升级版引擎)
 const runCode = async (isContinue = false) => {
     if (isRunning.value) return
 
-    const lines = code.value.split('\n')
-    if (isContinue && (hasError.value || lines.length < lastExecutedIndex.value)) {
-        logs.value.push("⚠ Cannot continue. Restarting...")
-        isContinue = false
+    // 如果不是 Continue，先重置
+    if (!isContinue) {
+        resetGame(true)
+        logs.value.push('> System Initialized...')
     }
 
     isRunning.value = true
     hasError.value = false
-    executionErrorLine.value = -1
 
+    // === 第一阶段：编译 (使用 new Function) ===
+    const commandQueue: Command[] = []
+
+    // 伪造 robot 对象
+    const robotApi = {
+        moveUp: (steps = 1) => {
+            for (let i = 0; i < steps; i++) commandQueue.push({ action: 'move', dir: 'back' })
+        },
+        moveDown: (steps = 1) => {
+            for (let i = 0; i < steps; i++) commandQueue.push({ action: 'move', dir: 'front' })
+        },
+        moveLeft: (steps = 1) => {
+            for (let i = 0; i < steps; i++) commandQueue.push({ action: 'move', dir: 'left' })
+        },
+        moveRight: (steps = 1) => {
+            for (let i = 0; i < steps; i++) commandQueue.push({ action: 'move', dir: 'right' })
+        }
+    }
+
+    try {
+        // 沙箱执行用户代码
+        const userFunc = new Function('robot', code.value)
+        userFunc(robotApi)
+        logs.value.push(`> Logic Valid. Queue size: ${commandQueue.length}`)
+    } catch (e: any) {
+        hasError.value = true
+        logs.value.push(`❌ Syntax/Runtime Error: ${e.message}`)
+        isRunning.value = false
+        return
+    }
+
+    // === 第二阶段：执行队列 ===
+    // 决定从哪里开始执行 (Continue 逻辑)
     let startIndex = 0
     if (isContinue) {
-        startIndex = lastExecutedIndex.value
-        logs.value.push(`>> Continuing from line ${startIndex + 1}...`)
-    } else {
-        resetGame(true)
-        logs.value.push('> Starting execution...')
+        // 如果是 Continue，只执行新增的指令
+        if (commandQueue.length <= lastExecutedCommandCount.value) {
+            logs.value.push('> No new commands generated.')
+            isRunning.value = false
+            return
+        }
+        startIndex = lastExecutedCommandCount.value
+        logs.value.push(`>> Resuming from command ${startIndex + 1}...`)
     }
 
-    for (let i = startIndex; i < lines.length; i++) {
-        currentHighlightLine.value = i
-        const line = lines[i]
-        const cmdStr = line?.trim()
+    const commandsToRun = commandQueue.slice(startIndex)
 
-        if (!cmdStr || cmdStr.startsWith('//')) {
-            await wait(100)
-            continue
-        }
+    for (const cmd of commandsToRun) {
+        if (hasError.value) break // 如果中途撞墙，停止
 
-        try {
-            const match = cmdStr.match(/robot\.(moveUp|moveDown|moveLeft|moveRight)\s*\(\s*(\d*)\s*\)/)
+        if (cmd.action === 'move' && cmd.dir) {
+            await wait(500) // 动画间隔
 
-            if (match) {
-                const action = match[1]
-                const steps = match[2] ? parseInt(match[2], 10) : 1
+            // 计算 delta
+            let dx = 0, dy = 0
+            if (cmd.dir === 'right') dx = 1
+            if (cmd.dir === 'left') dx = -1
+            if (cmd.dir === 'front') dy = 1
+            if (cmd.dir === 'back') dy = -1
 
-                for (let step = 0; step < steps; step++) {
-                    await wait(500)
-                    let success = true
-                    if (action === 'moveRight') success = move(1, 0, 'right')
-                    else if (action === 'moveLeft') success = move(-1, 0, 'left')
-                    else if (action === 'moveUp') success = move(0, -1, 'back')
-                    else if (action === 'moveDown') success = move(0, 1, 'front')
-
-                    if (!success) throw new Error("Robot crashed")
-                }
-            } else {
-                if (cmdStr.startsWith('robot.')) {
-                    throw new Error(`Syntax Error: ${cmdStr}`)
-                }
+            const success = move(dx, dy, cmd.dir)
+            if (!success) {
+                hasError.value = true
+                break
             }
-            lastExecutedIndex.value = i + 1
-        } catch (e: any) {
-            executionErrorLine.value = i
-            hasError.value = true
-            logs.value.push(`❌ Error at line ${i + 1}: ${e.message}`)
-            break
         }
     }
 
-    currentHighlightLine.value = -1
-    isRunning.value = false
     if (!hasError.value) {
+        lastExecutedCommandCount.value = commandQueue.length
         logs.value.push('> Execution paused/finished.')
     }
+
+    isRunning.value = false
 }
 
-// 2.5 其他辅助函数
+// 2.5 辅助函数
 const insertCode = (snippet: string) => {
     code.value += (code.value.endsWith('\n') ? '' : '\n') + snippet
 }
@@ -202,11 +227,11 @@ const insertCode = (snippet: string) => {
 const handleRunAll = () => runCode(false)
 const handleContinue = () => runCode(true)
 
+// Continue 按钮可用状态：没在跑 && 没报错 && 队列变长了
 const canContinue = computed(() => {
-    return !isRunning.value &&
-        !hasError.value &&
-        lastExecutedIndex.value > 0 &&
-        code.value.split('\n').length > lastExecutedIndex.value
+    // 这里简单判断：只要不报错且不为空就可以尝试 Continue
+    // 真实的队列长度判断需要先跑一遍编译，为了性能这里简化处理
+    return !isRunning.value && !hasError.value && lastExecutedCommandCount.value > 0
 })
 
 const syncProgress = async () => {
@@ -222,7 +247,6 @@ const syncProgress = async () => {
             params: { username }
         })
 
-        // 现在 TS 知道 data.value 里一定有 level 了，不会报错
         if (data.value && typeof data.value.level === 'number') {
             const serverLevelId = data.value.level
             const savedIndex = serverLevelId - 1
@@ -238,12 +262,12 @@ const syncProgress = async () => {
 }
 
 // ==========================================
-// 3. 监听器与生命周期 (放在最后)
+// 3. 监听器与生命周期
 // ==========================================
 
 watch(currentLevel, (newVal) => {
     resetGame(true)
-    code.value = newVal.initialCode || '' // 增加空字符串兜底
+    code.value = newVal.initialCode || ''
     logs.value.push(`> Loaded Level ${newVal.id}: ${newVal.title}`)
 }, { immediate: true })
 
@@ -261,27 +285,11 @@ onMounted(() => {
 
             <QuickCommandBar @insert="insertCode" />
 
-            <div class="flex-1 flex relative">
-                <div
-                    class="w-10 bg-game-bg border-r border-game-border flex flex-col pt-4 pb-4 font-mono text-sm leading-relaxed text-right select-none">
-                    <div v-for="(_, index) in code.split('\n')" :key="index"
-                        class="h-6 px-2 flex items-center justify-end gap-1 transition-colors" :class="{
-                            'text-green-400 font-bold': currentHighlightLine === index,
-                            'text-red-500 font-bold': executionErrorLine === index,
-                            'text-game-text-muted': currentHighlightLine !== index && executionErrorLine !== index,
-                            'bg-green-500/10': currentHighlightLine === index,
-                            'bg-red-500/10': executionErrorLine === index
-                        }">
-                        <span v-if="currentHighlightLine === index" class="text-[10px]">▶</span>
-                        <span v-else-if="executionErrorLine === index" class="text-[10px]">✖</span>
-                        <span v-else-if="index < lastExecutedIndex" class="text-[10px] text-green-500/50">✔</span>
-                        {{ index + 1 }}
-                    </div>
-                </div>
-
-                <textarea v-model="code" spellcheck="false"
-                    class="flex-1 bg-transparent p-4 pl-2 font-mono text-sm leading-relaxed text-game-primary resize-none outline-none z-10 whitespace-pre"
-                    style="line-height: 1.5rem;"></textarea>
+            <!-- 编辑器主体 -->
+            <div class="flex-1 flex relative overflow-hidden bg-[#1e1e1e]">
+                <ClientOnly fallback-tag="div" fallback="Loading Editor...">
+                    <CodeEditor v-model="code" />
+                </ClientOnly>
             </div>
 
             <div class="p-4 border-t border-game-border flex justify-between items-center bg-game-bg/20">
