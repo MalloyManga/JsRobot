@@ -3,7 +3,7 @@ name: Deploy Nuxt site to Pages
 
 on:
   push:
-    branches: ["main"] # 确保你的默认分支是 main，如果是 master 请修改这里
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -65,7 +65,10 @@ jobs:
       - name: Static HTML export with Nuxt
         run: ${{ steps.detect-package-manager.outputs.manager }} run generate
 
-      # --- 关键修改：Nuxt 3/4 输出目录是 .output/public ---
+      # --- 核心修复：创建 .nojekyll 文件防止 _nuxt 目录被忽略 ---
+      - name: Create .nojekyll file
+        run: touch .output/public/.nojekyll
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
