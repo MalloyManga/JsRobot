@@ -27,6 +27,24 @@ export const useGameEngine = (
     const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
     const insertCode = (snippet: string) => code.value += (code.value.endsWith('\n') ? '' : '\n') + snippet
 
+    watch(currentLevel, (newVal) => {
+        // 1. 重置玩家位置 (Bug 1 修复)
+        player.value = { ...newVal.startPos }
+        direction.value = 'front'
+
+        // 2. 清空日志并添加欢迎语 (Bug 2 修复)
+        logs.value = []
+        logs.value.push(`> Loaded Level ${newVal.id}: ${newVal.title}`)
+
+        // 3. 重置代码编辑器内容
+        code.value = newVal.initialCode || ''
+
+        // 4. 重置执行状态
+        isRunning.value = false
+        hasError.value = false
+        lastExecutedCommandCount.value = 0
+    }, { immediate: true })
+
     // === 物理层：移动逻辑 ===
     const move = (dx: number, dy: number, newDir: Direction): boolean => {
         direction.value = newDir
