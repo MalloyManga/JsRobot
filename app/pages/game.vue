@@ -218,11 +218,12 @@ const syncProgress = async () => {
     }
 
     try {
-        const { data } = await useFetch('/api/user/progress', {
+        const { data } = await useFetch<{ level: number }>('/api/user/progress', {
             params: { username }
         })
 
-        if (data.value && data.value.level) {
+        // 现在 TS 知道 data.value 里一定有 level 了，不会报错
+        if (data.value && typeof data.value.level === 'number') {
             const serverLevelId = data.value.level
             const savedIndex = serverLevelId - 1
 

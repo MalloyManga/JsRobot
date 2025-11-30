@@ -1,31 +1,30 @@
-import { findUser } from '../../db.js'
+// server/api/user/progress.ts
+import { findUser, updateUserLevel } from '../../db.js'
 
 export default defineEventHandler(async (event) => {
     const method = event.method
 
-    // 模拟从 Header 拿 Token (其实我们这里直接传 username 更快)
-    // 在真实场景中，这里应该解析 Bearer Token
-    const query = getQuery(event)
-    const username = query.username as string
-    const user = findUser(username)
-
-    if (!user) {
-        throw createError({ statusCode: 401, message: 'Unauthorized' })
-    }
-
+    // GET: 获取进度
     if (method === 'GET') {
-        // 获取进度
-        return { level: user.level }
+        const query = getQuery(event)
+        const username = query.username as string
+
+        // 每次都从文件重新读取，保证最新
+        const user = findUser(username)
+        return { level: user ? user.level : 1 }
     }
 
+    // POST: 更新进度
     if (method === 'POST') {
-        // 更新进度
         const body = await readBody(event)
-        // 只有当新关卡大于当前记录时才更新
-        if (body.level > user.level) {
-            user.level = body.level
-            // --- 真实数据库: await prisma.user.update(...) ---
+        const { username, level } = body
+
+        const updatedUser = updateUserLevel(username, level)
+
+        if (updatedUser) {
+            return { success: true, level: updatedUser.level }
+        } else {
+            return { success: false, message: 'User not found' }
         }
-        return { success: true, level: user.level }
     }
 })

@@ -1,28 +1,40 @@
+// server/api/auth/login.post.ts
 import { findUser } from '../../db.js'
 
 export default defineEventHandler(async (event) => {
     const body = await readBody(event)
-    const { username } = body // 演示从简，甚至不校验密码，只要名字对就行
+    const { username, password } = body
 
-    // --- 真实数据库写法 (假装) ---
-    // const user = await prisma.user.findUnique({ where: { username } })
-    // if (!bcrypt.compareSync(password, user.passwordHash)) throw ...
-    // ---------------------------
-
-    const user = findUser(username)
-
-    if (!user) {
+    if (!username || !password) {
         throw createError({
-            statusCode: 401,
-            statusMessage: 'User not found'
+            statusCode: 400,
+            message: 'Missing credentials'
         })
     }
 
-    // 简单起见，不发 JWT 了，直接把用户信息扔回去
-    // 前端存 localStorage 即可
+    // 1. 找用户
+    const user = findUser(username)
+
+    // 2. 用户不存在 -> 报错
+    if (!user) {
+        throw createError({
+            statusCode: 401,
+            message: 'User not found'
+        })
+    }
+
+    // 3. [核心修正] 严格比对密码
+    if (user.password !== password) {
+        throw createError({
+            statusCode: 401,
+            message: 'Invalid password'
+        })
+    }
+
+    // 4. 成功
     return {
         success: true,
-        token: 'mock-token-' + Date.now(), // 假 Token
-        user: user
+        token: 'mock-session-' + Date.now(),
+        user: { username: user.username, level: user.level }
     }
 })
