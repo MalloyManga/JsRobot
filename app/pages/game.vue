@@ -8,6 +8,7 @@ import { type LevelConfig, type Point, TileType } from '~/types/game.js'
 // ==========================================
 
 const route = useRoute()
+const { showToast } = useToast()
 
 // 1.1 获取初始关卡
 const getInitialLevelIndex = () => {
@@ -121,7 +122,7 @@ const move = (dx: number, dy: number, newDir: Direction): boolean => {
         logs.value.push('🎉 GOAL REACHED!')
         saveProgressToServer(currentLevel.value.id)
         setTimeout(() => {
-            alert('Level Complete!')
+            showToast('Level Complete!', 3000)
             if (currentLevelIndex.value < levels.length - 1) {
                 currentLevelIndex.value++
             }
