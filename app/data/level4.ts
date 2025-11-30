@@ -1,27 +1,39 @@
 // app/data/level4.ts
 import { type LevelConfig, TileType } from '~/types/game.js'
-const { Floor, Wall, Goal, Trap } = TileType
+const { Floor, Wall, Goal } = TileType
 
 export const level4: LevelConfig = {
     id: 4,
     difficulty: 3,
-    title: "The Trap",
-    // 教学：躲避陷阱，修改错误代码
-    initialCode: `// WARNING: Trap detected! 💀
-// Do NOT walk straight into the red zone.
+    title: "The Loop",
+    // 教学：利用循环处理重复的阶梯模式
+    initialCode: `/* 
+ * LESSON: Loops
+ * 
+ * Programmers hate repeating themselves.
+ * Look at the map: it's a "Staircase" pattern.
+ * 
+ * Pattern: Move Right 2 steps, then Move Down 2 steps.
+ * This repeats 3 times.
+ * 
+ * Instead of writing 6 lines of code, use a "for loop":
+ * 
+ * for (let i = 0; i < 3; i++) {
+ *     // Code here runs 3 times
+ * }
+ */
 
-// TASK: The code below is dangerous.
-// Change it to go AROUND the trap.
-// (Down -> Right -> Up)
+// TASK: Use a loop to climb the stairs efficiently.
 
-robot.moveRight(3); // <--- This will kill you!
 `,
-    startPos: { x: 1, y: 2 },
+    startPos: { x: 1, y: 1 },
     map: [
-        [Wall, Wall, Wall, Wall, Wall, Wall],
-        [Wall, Floor, Floor, Floor, Goal, Wall], // 上路：安全
-        [Wall, Floor, Trap, Trap, Floor, Wall], // 中路：陷阱
-        [Wall, Floor, Floor, Floor, Floor, Wall], // 下路：安全
-        [Wall, Wall, Wall, Wall, Wall, Wall]
-    ]
+        [Wall, Wall, Wall, Wall, Wall, Wall, Wall, Wall, Wall],
+        [Wall, Floor, Floor, Wall, Wall, Wall, Wall, Wall, Wall], // Level 1 (Right 2)
+        [Wall, Wall, Floor, Floor, Floor, Wall, Wall, Wall, Wall], // Level 2 (Down 2, Right 2)
+        [Wall, Wall, Wall, Wall, Floor, Floor, Floor, Wall, Wall], // Level 3
+        [Wall, Wall, Wall, Wall, Wall, Wall, Floor, Floor, Goal], // Level 4
+        [Wall, Wall, Wall, Wall, Wall, Wall, Wall, Wall, Wall]
+    ],
+    entities: [] // 纯逻辑关卡，无道具
 }

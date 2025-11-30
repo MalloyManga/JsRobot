@@ -1,23 +1,33 @@
-// app/data/level2.ts
+// app/level2.ts
 import { type LevelConfig, TileType } from '~/types/game.js'
 const { Floor, Wall, Goal } = TileType
 
 export const level2: LevelConfig = {
     id: 2,
     difficulty: 1,
-    title: "The Arguments",
-    // 教学：括号里的数字控制步数
-    initialCode: `// Great! Now let's learn "Arguments".
-// The number inside ( ) controls the steps.
+    title: "The Staircase",
+    initialCode: `// MISSION: Descend the stairs.
+// 
+// TIP: Instead of writing:
+// robot.moveRight();
+// robot.moveRight();
+// 
+// You can use Arguments (Parameters):
+// robot.moveRight(2);  <-- Moves 2 steps instantly
+//
+// TASK: Navigate the stairs (Right 2 -> Down 2 -> Right 2)
 
-// TASK: The bridge is too long for 1 step.
-// Change (1) to (4) to cross it!
-
-robot.moveRight(1);`,
+robot.moveRight(2);
+// What comes next?
+`,
     startPos: { x: 1, y: 1 },
     map: [
         [Wall, Wall, Wall, Wall, Wall, Wall, Wall],
-        [Wall, Floor, Floor, Floor, Floor, Goal, Wall], // 距离起点 4 格
+        [Wall, Floor, Floor, Wall, Wall, Wall, Wall], // (1,1) -> (3,1)
+        [Wall, Wall, Floor, Wall, Wall, Wall, Wall], // (3,2)
+        [Wall, Wall, Floor, Floor, Wall, Wall, Wall], // (3,3) -> (5,3)
+        [Wall, Wall, Wall, Floor, Wall, Wall, Wall],
+        [Wall, Wall, Wall, Floor, Floor, Goal, Wall], // (5,5) -> (7,5)
         [Wall, Wall, Wall, Wall, Wall, Wall, Wall]
     ]
 }

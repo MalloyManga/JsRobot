@@ -1,27 +1,33 @@
-// app/data/level1.ts
+// app/level1.ts
 import { type LevelConfig, TileType } from '~/types/game.js'
 const { Floor, Wall, Goal } = TileType
 
 export const level1: LevelConfig = {
     id: 1,
     difficulty: 1,
-    title: "Hello World",
-    // 教学：解释 Robot 是对象，moveRight 是动作
-    initialCode: `// Welcome, Cadet!
-// In JavaScript, "robot" is the Object.
-// "moveRight" is the Action.
+    title: "System Boot",
+    initialCode: `// MISSION: Initialize the Robot.
+// 
+// [1] "robot" is the Object you control.
+// [2] ".moveRight()" is the Method (Action).
+//
+// --- CONTROLS GUIDE ---
+// [Run Code]: Resets the robot and runs ALL code.
+// [Continue]: Keeps the robot current position and runs NEW code only.
+//
+// TIP: Use Ctrl + / to toggle comment/uncomment.
+// TIP: Use Shift + Alt + F to format your code.
+//
+// TASK: Uncomment the line below to reach the goal.
 
-// TASK: Uncomment the code below to move.
-// (Delete the "//" at the start)
-
-// robot.moveRight(2);
-// robot.moveDown();`,
+// robot.moveRight();
+// robot.moveRight();
+// robot.moveRight();
+`,
     startPos: { x: 1, y: 1 },
     map: [
-        [Wall, Wall, Wall, Wall, Wall],
-        [Wall, Floor, Floor, Floor, Wall],
-        [Wall, Floor, Wall, Floor, Wall],
-        [Wall, Floor, Floor, Goal, Wall],
-        [Wall, Wall, Wall, Wall, Wall]
+        [Wall, Wall, Wall, Wall, Wall, Wall],
+        [Wall, Floor, Floor, Floor, Goal, Wall], // 直线，距离3格
+        [Wall, Wall, Wall, Wall, Wall, Wall]
     ]
 }

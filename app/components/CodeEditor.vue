@@ -9,10 +9,7 @@ import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 
-const props = defineProps<{
-    modelValue: string
-}>()
-
+const props = defineProps<{ modelValue: string }>()
 const emit = defineEmits(['update:modelValue'])
 const editorContainer = shallowRef<HTMLElement | null>(null)
 const editorInstance = shallowRef<monaco.editor.IStandaloneCodeEditor | null>(null)
@@ -35,14 +32,38 @@ const initIntelliSense = () => {
         noLib: false
     })
 
+    // [修复] 添加 pickUp 和 attack 到类型定义中
     defaults.addExtraLib(`
+    /**
+     * The Robot Object. Control it to reach the goal!
+     */
     declare class Robot {
+        /** Move the robot UP (Backwards). */
         moveUp(steps?: number): void;
+        /** Move the robot DOWN (Forwards). */
         moveDown(steps?: number): void;
+        /** Move the robot LEFT. */
         moveLeft(steps?: number): void;
+        /** Move the robot RIGHT. */
         moveRight(steps?: number): void;
+
+        /** 
+         * Pick up an item (Key, Weapon) from the current tile. 
+         * The item will be stored in your Backpack.
+         */
+        pickUp(): void;
+
+        /**
+         * Attack a target entity.
+         * @param target The entity element (e.g., from document.querySelector)
+         */
+        attack(target: any): void;
     }
+    
+    // Declare global variables
     declare const robot: Robot;
+    declare const document: any;
+    declare const console: any;
   `, 'ts:filename/robot.d.ts')
 }
 
@@ -50,10 +71,9 @@ onMounted(() => {
     if (editorContainer.value) {
         initIntelliSense()
 
-        // === 【修复】注册代码片段 ===
+        // 注册代码片段 (保持不变)
         monaco.languages.registerCompletionItemProvider('javascript', {
             provideCompletionItems: (model, position) => {
-                // 1. 计算当前光标所在单词的范围，用于替换
                 const word = model.getWordUntilPosition(position)
                 const range = {
                     startLineNumber: position.lineNumber,
@@ -66,38 +86,26 @@ onMounted(() => {
                     {
                         label: 'if',
                         kind: monaco.languages.CompletionItemKind.Snippet,
-                        insertText: [
-                            'if (${1:condition}) {',
-                            '\t$0',
-                            '}'
-                        ].join('\n'),
+                        insertText: ['if (${1:condition}) {', '\t$0', '}'].join('\n'),
                         insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
                         documentation: 'If Statement',
-                        range: range // 必须加上这个！
+                        range: range
                     },
                     {
                         label: 'for',
                         kind: monaco.languages.CompletionItemKind.Snippet,
-                        insertText: [
-                            'for (let ${1:i} = 0; ${1:i} < ${2:count}; ${1:i}++) {',
-                            '\t$0',
-                            '}'
-                        ].join('\n'),
+                        insertText: ['for (let ${1:i} = 0; ${1:i} < ${2:count}; ${1:i}++) {', '\t$0', '}'].join('\n'),
                         insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
                         documentation: 'For Loop',
-                        range: range // 必须加上这个！
+                        range: range
                     },
                     {
                         label: 'while',
                         kind: monaco.languages.CompletionItemKind.Snippet,
-                        insertText: [
-                            'while (${1:condition}) {',
-                            '\t$0',
-                            '}'
-                        ].join('\n'),
+                        insertText: ['while (${1:condition}) {', '\t$0', '}'].join('\n'),
                         insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
                         documentation: 'While Loop',
-                        range: range // 必须加上这个！
+                        range: range
                     }
                 ]
                 return { suggestions: suggestions }
