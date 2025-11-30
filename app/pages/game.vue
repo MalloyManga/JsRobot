@@ -213,6 +213,10 @@ const syncProgress = async () => {
     const username = localStorage.getItem('hacker_name')
     if (!username) return
 
+    if (route.query.levelIndex !== undefined && route.query.levelIndex !== null) {
+        return
+    }
+
     try {
         const { data } = await useFetch('/api/user/progress', {
             params: { username }

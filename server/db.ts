@@ -11,7 +11,7 @@ interface User {
 // 用一个 Map 或者 Array 来存
 export const fakeUserDb: User[] = [
     // 预置一个管理员账号，方便演示
-    { username: 'admin', level: 5 }
+    { username: 'admin', level: 2 }
 ]
 
 // 简单的查找助手
