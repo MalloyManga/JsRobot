@@ -5,6 +5,9 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   css: ['./app/assets/css/main.css'],
   ssr: false,
+  app: {
+    baseURL: '/JsRobot/'
+  },
   vite: {
     plugins: [
       tailwindcss()
